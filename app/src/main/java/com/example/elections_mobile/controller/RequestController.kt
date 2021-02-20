@@ -1,27 +1,47 @@
 package com.example.elections_mobile.controller
 
-import java.io.OutputStreamWriter
-import java.net.HttpURLConnection
-import java.net.URL
+import khttp.responses.Response
+import org.json.JSONObject
 import java.net.URLEncoder
 
 class RequestController
 {
-    fun register(code: String)
-    {
-        val url = URL("https://10.53.251.10/register")
-        val param = URLEncoder.encode(code, "UTF-8")
+    companion object {
+        fun register(code: String): JSONObject? {
+            val url = "https://10.53.251.10/register"
 
-        with(url.openConnection() as HttpURLConnection)
-        {
-            requestMethod = "POST"
-            setRequestProperty("Content-Type", "application/json; utf-8")
-            setRequestProperty("Accept", "application/json")
-            val os = OutputStreamWriter(outputStream)
-            os.write(param)
-            os.flush()
+            val res: Response = khttp.post(url = url, data = code)
 
+            if(res.statusCode == 200)
+            {
+                return res.jsonObject
+            }
+            return null
+        }
 
+        fun authme(): String {
+            val url = "https://10.53.251.10/authme"
+            val res: Response = khttp.get(url)
+
+            if(res.statusCode == 200)
+            {
+                return res.text
+            }
+            return ""
+        }
+
+        fun auth(pass: String): Int {
+            val url = "https://10.53.251.10/auth"
+            val res: Response = khttp.post(url = url, data = pass)
+
+            return res.statusCode
+        }
+
+        fun data(): Int {
+            val url = "https://10.53.251.10/data"
+            val res: Response = khttp.post(url = url, data = "sent")
+
+            return res.statusCode
         }
     }
 }
