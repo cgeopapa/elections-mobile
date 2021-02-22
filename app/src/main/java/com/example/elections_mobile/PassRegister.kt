@@ -7,7 +7,10 @@ import android.widget.EditText
 import com.example.elections_mobile.controller.LockAppController
 import com.example.elections_mobile.controller.RequestController
 
-class PassRegister : AppCompatActivity() {
+class PassRegister : AppCompatActivity()
+{
+    private val requestController = RequestController(this)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pass_register)
@@ -15,10 +18,10 @@ class PassRegister : AppCompatActivity() {
         val pass = findViewById<EditText>(R.id.pass).text.toString()
         val button = findViewById<Button>(R.id.passOK)
         button.setOnClickListener {
-            val status = RequestController.auth(pass)
+            val status = requestController.auth(pass)
             if(status == 200)
             {
-                val dataStatus = RequestController.data()
+                val dataStatus = requestController.data()
                 if(dataStatus == 200)
                 {
                     LockAppController.success(this)
