@@ -10,26 +10,36 @@ import com.example.elections_mobile.controller.RequestController
 
 class PassRegister : AppCompatActivity()
 {
-    private val requestController = RequestController(this)
+    private lateinit var requestController: RequestController
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pass_register)
+        requestController = RequestController(this)
 
-        val pass = findViewById<EditText>(R.id.pass).text.toString()
         val button = findViewById<Button>(R.id.passOK)
         button.setOnClickListener {
-            requestController.auth(pass).observe(this, Observer {  })
-            if(status == 200)
-            {
-                val dataStatus = requestController.data()
-                if(dataStatus == 200)
+            val pass = findViewById<EditText>(R.id.pass).text.toString()
+            println(pass)
+            requestController.auth(pass).observe(this, Observer { data ->
+                if(data != null)
                 {
-                    LockAppController.success(this)
+                    requestController.data().observe(this, Observer { data ->
+                        if(data != null)
+                        {
+                            LockAppController.success(this)
+                        }
+                        else
+                        {
+                            LockAppController.oblivion(this)
+                        }
+                    })
                 }
-                LockAppController.oblivion(this)
-            }
-            LockAppController.oblivion(this)
+                else
+                {
+                    LockAppController.oblivion(this)
+                }
+            })
         }
     }
 

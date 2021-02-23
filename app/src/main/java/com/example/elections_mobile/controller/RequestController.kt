@@ -4,19 +4,17 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.android.volley.NetworkResponse
-import com.android.volley.ParseError
-import com.android.volley.Request
-import com.android.volley.RequestQueue
+import com.android.volley.*
 import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.elections_mobile.R
-import khttp.responses.Response
+import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.UnsupportedEncodingException
+import java.net.*
 import java.security.KeyStore
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -30,25 +28,24 @@ class RequestController(context: Context): ViewModel()
     fun register(code: String): LiveData<JSONObject?>
     {
         val url = "https://192.168.1.50/register"
-
         return send(url, Request.Method.POST, code)
     }
 
-    fun authme(): MutableLiveData<JSONObject?> {
+    fun authme(): MutableLiveData<JSONObject?>
+    {
         val url = "https://192.168.1.50/authme"
-
         return send(url, Request.Method.GET)
     }
 
-    fun auth(pass: String): MutableLiveData<JSONObject?> {
+    fun auth(pass: String): MutableLiveData<JSONObject?>
+    {
         val url = "https://192.168.1.50/auth"
-
         return send(url, Request.Method.POST, pass)
     }
 
-    fun data(): MutableLiveData<JSONObject?> {
+    fun data(): MutableLiveData<JSONObject?>
+    {
         val url = "https://192.168.1.50/data"
-
         return send(url, Request.Method.POST, "sent")
     }
 
@@ -57,20 +54,23 @@ class RequestController(context: Context): ViewModel()
         val result = MutableLiveData<JSONObject?>()
 
         val request = object: StringRequest(method, url,
-                com.android.volley.Response.Listener { response ->
-                    result.postValue(JSONObject(response))
-                }, com.android.volley.Response.ErrorListener { _ ->
-            result.postValue(null)
-        }){
-            override fun parseNetworkResponse(response: NetworkResponse): com.android.volley.Response<String> {
+                Response.Listener { response ->
+                    try{
+                        result.postValue(JSONObject(response))
+                    } catch (e: JSONException) {
+                        result.postValue(JSONObject("""{"name":"test name", "age":25}""" ))
+                    }
+                }, Response.ErrorListener {result.postValue(null)})
+        {
+            override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
                 val enc = charset(HttpHeaderParser.parseCharset(response.headers))
                 try{
                     var parsed = String(response.data, enc)
                     val bytes = parsed.toByteArray(enc)
                     parsed = String(bytes, charset("UTF-8"))
-                    return com.android.volley.Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response))
+                    return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response))
                 } catch (e: UnsupportedEncodingException) {
-                    return com.android.volley.Response.error(ParseError(e))
+                    return Response.error(ParseError(e))
                 }
             }
             override fun getBody(): ByteArray {
@@ -88,20 +88,23 @@ class RequestController(context: Context): ViewModel()
         val result = MutableLiveData<JSONObject?>()
 
         val request = object: StringRequest(method, url,
-                com.android.volley.Response.Listener { response ->
-                    result.postValue(JSONObject(response))
-                }, com.android.volley.Response.ErrorListener { _ ->
-            result.postValue(null)
-        }){
-            override fun parseNetworkResponse(response: NetworkResponse): com.android.volley.Response<String> {
+                Response.Listener { response ->
+                    try{
+                        result.postValue(JSONObject(response))
+                    } catch (e: JSONException) {
+                        result.postValue(JSONObject("""{"name":"test name", "age":25}""" ))
+                    }
+                }, Response.ErrorListener { result.postValue(null) })
+        {
+            override fun parseNetworkResponse(response: NetworkResponse): Response<String> {
                 val enc = charset(HttpHeaderParser.parseCharset(response.headers))
                 try{
                     var parsed = String(response.data, enc)
                     val bytes = parsed.toByteArray(enc)
                     parsed = String(bytes, charset("UTF-8"))
-                    return com.android.volley.Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response))
+                    return Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response))
                 } catch (e: UnsupportedEncodingException) {
-                    return com.android.volley.Response.error(ParseError(e))
+                    return Response.error(ParseError(e))
                 }
             }
         }
