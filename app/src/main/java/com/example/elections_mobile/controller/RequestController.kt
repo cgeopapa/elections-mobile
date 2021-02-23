@@ -4,21 +4,19 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import com.android.volley.NetworkResponse
+import com.android.volley.ParseError
 import com.android.volley.Request
 import com.android.volley.RequestQueue
-import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.HttpHeaderParser
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.elections_mobile.R
 import khttp.responses.Response
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.InputStream
-import java.net.URLEncoder
-import java.security.Key
+import java.io.UnsupportedEncodingException
 import java.security.KeyStore
 import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
@@ -29,50 +27,88 @@ class RequestController(context: Context): ViewModel()
     private val context = context
     private val queue: RequestQueue = Volley.newRequestQueue(context)
 
-    fun register(code: String): LiveData<JSONObject?> {
-        val result = MutableLiveData<JSONObject?>()
+    fun register(code: String): LiveData<JSONObject?>
+    {
         val url = "https://192.168.1.50/register"
 
-        val registerRequest = object: StringRequest(Method.POST, url,
-                com.android.volley.Response.Listener<String> { response ->
+        return send(url, Request.Method.POST, code)
+    }
+
+    fun authme(): MutableLiveData<JSONObject?> {
+        val url = "https://192.168.1.50/authme"
+
+        return send(url, Request.Method.GET)
+    }
+
+    fun auth(pass: String): MutableLiveData<JSONObject?> {
+        val url = "https://192.168.1.50/auth"
+
+        return send(url, Request.Method.POST, pass)
+    }
+
+    fun data(): MutableLiveData<JSONObject?> {
+        val url = "https://192.168.1.50/data"
+
+        return send(url, Request.Method.POST, "sent")
+    }
+
+    private fun send(url: String, method: Int, body: String): MutableLiveData<JSONObject?>
+    {
+        val result = MutableLiveData<JSONObject?>()
+
+        val request = object: StringRequest(method, url,
+                com.android.volley.Response.Listener { response ->
                     result.postValue(JSONObject(response))
-                }, com.android.volley.Response.ErrorListener { error ->
-            System.err.println("error => $error")
+                }, com.android.volley.Response.ErrorListener { _ ->
             result.postValue(null)
         }){
-                override fun getBody(): ByteArray {
-                    return code.toByteArray()
+            override fun parseNetworkResponse(response: NetworkResponse): com.android.volley.Response<String> {
+                val enc = charset(HttpHeaderParser.parseCharset(response.headers))
+                try{
+                    var parsed = String(response.data, enc)
+                    val bytes = parsed.toByteArray(enc)
+                    parsed = String(bytes, charset("UTF-8"))
+                    return com.android.volley.Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response))
+                } catch (e: UnsupportedEncodingException) {
+                    return com.android.volley.Response.error(ParseError(e))
                 }
             }
+            override fun getBody(): ByteArray {
+                return body.toByteArray()
+            }
+        }
         HttpsURLConnection.setDefaultSSLSocketFactory(getSocketFactory())
         HttpsURLConnection.setDefaultHostnameVerifier(getHostnameVerifier())
-        println("VOLLEY")
-        queue.add(registerRequest)
+        queue.add(request)
         return result
     }
 
-    fun authme(): String {
-        val url = "https://192.168.1.50/authme"
-        val res: Response = khttp.get(url)
+    private fun send(url: String, method: Int): MutableLiveData<JSONObject?>
+    {
+        val result = MutableLiveData<JSONObject?>()
 
-        if (res.statusCode == 200) {
-            return res.text
+        val request = object: StringRequest(method, url,
+                com.android.volley.Response.Listener { response ->
+                    result.postValue(JSONObject(response))
+                }, com.android.volley.Response.ErrorListener { _ ->
+            result.postValue(null)
+        }){
+            override fun parseNetworkResponse(response: NetworkResponse): com.android.volley.Response<String> {
+                val enc = charset(HttpHeaderParser.parseCharset(response.headers))
+                try{
+                    var parsed = String(response.data, enc)
+                    val bytes = parsed.toByteArray(enc)
+                    parsed = String(bytes, charset("UTF-8"))
+                    return com.android.volley.Response.success(parsed, HttpHeaderParser.parseCacheHeaders(response))
+                } catch (e: UnsupportedEncodingException) {
+                    return com.android.volley.Response.error(ParseError(e))
+                }
+            }
         }
-        return ""
-    }
-
-    fun auth(pass: String): Int {
-        val url = "https://192.168.1.50/auth"
-        val res: Response = khttp.post(url = url, data = pass)
-
-        return res.statusCode
-    }
-
-    fun data(): Int {
-        val url = "https://192.168.1.50/data"
-        val res: Response = khttp.post(url = url, data = "sent")
-
-        return res.statusCode
+        HttpsURLConnection.setDefaultSSLSocketFactory(getSocketFactory())
+        HttpsURLConnection.setDefaultHostnameVerifier(getHostnameVerifier())
+        queue.add(request)
+        return result
     }
 
     private fun getSocketFactory(): SSLSocketFactory
@@ -81,24 +117,21 @@ class RequestController(context: Context): ViewModel()
         val caInput: InputStream = BufferedInputStream(context.resources.openRawResource(R.raw.ca))
         val clientInput = BufferedInputStream(context.resources.openRawResource(R.raw.client))
         val ca: Certificate
-        val client: Certificate
 
         try{
             ca = cf.generateCertificate(caInput)
-            client = cf.generateCertificate(clientInput)
         } finally {
             caInput.close()
-//            clientInput.close()
         }
 
         val keyStoreType = KeyStore.getDefaultType()
         val keyStore = KeyStore.getInstance(keyStoreType)
         keyStore.load(null, null)
 
-        val ks = KeyStore.getInstance(KeyStore.getDefaultType())
-        val pwd = "".toCharArray()
+        val ks = KeyStore.getInstance("PKCS12")
+        val pwd = "ele".toCharArray()
         ks.load(clientInput, pwd)
-        val kmf = KeyManagerFactory.getInstance("PKIX")
+        val kmf = KeyManagerFactory.getInstance("X509")
         kmf.init(ks, pwd)
         clientInput.close()
 
@@ -115,7 +148,7 @@ class RequestController(context: Context): ViewModel()
 
     private fun getHostnameVerifier(): HostnameVerifier
     {
-        return HostnameVerifier { hostname, session ->
+        return HostnameVerifier { _, _ ->
 //            val hv = HttpsURLConnection.getDefaultHostnameVerifier()
 //            return@HostnameVerifier hv.verify("192.168.1.50", session)
             true

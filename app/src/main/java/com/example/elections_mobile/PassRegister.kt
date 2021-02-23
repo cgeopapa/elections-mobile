@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import androidx.lifecycle.Observer
 import com.example.elections_mobile.controller.LockAppController
 import com.example.elections_mobile.controller.RequestController
 
@@ -18,7 +19,7 @@ class PassRegister : AppCompatActivity()
         val pass = findViewById<EditText>(R.id.pass).text.toString()
         val button = findViewById<Button>(R.id.passOK)
         button.setOnClickListener {
-            val status = requestController.auth(pass)
+            requestController.auth(pass).observe(this, Observer {  })
             if(status == 200)
             {
                 val dataStatus = requestController.data()
@@ -30,5 +31,9 @@ class PassRegister : AppCompatActivity()
             }
             LockAppController.oblivion(this)
         }
+    }
+
+    override fun onBackPressed() {
+        //NO!!!
     }
 }

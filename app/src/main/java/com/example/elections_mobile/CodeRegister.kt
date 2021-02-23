@@ -1,5 +1,6 @@
 package com.example.elections_mobile
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
@@ -37,10 +38,12 @@ class CodeRegister : AppCompatActivity()
                 {
                     confirmInfo(data)
                 }
-                LockAppController.oblivion(this)
+                else {
+                    LockAppController.oblivion(this)
+                }
             })
         }
-        builder.setNegativeButton("Όχι") { dialog, id ->
+        builder.setNegativeButton("Όχι") { _, _ ->
 
         }
 
@@ -51,16 +54,18 @@ class CodeRegister : AppCompatActivity()
     {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Είναι αυτές οι πληροφορίες σωστές;")
-        builder.setMessage(data.toString())
-        builder.setPositiveButton("Ναι") {dialog, id ->
-            val pass = requestController.authme()
-            if(pass != "")
-            {
-                //Next activity
-            }
-            LockAppController.oblivion(this)
+        builder.setMessage(
+                "Όνομα: ${data["fname"]}\n" +
+                "Επώνυμο: ${data["lname"]}\n" +
+                "Τηλέφωνο: ${data["phone"]}"
+        )
+        builder.setPositiveButton("Ναι") {_, _ ->
+            requestController.authme().observe(this, Observer { _ ->
+                val intent = Intent(this, PassRegister::class.java)
+                startActivity(intent)
+            })
         }
-        builder.setNegativeButton("Όχι") { dialog, id ->
+        builder.setNegativeButton("Όχι") { _, _ ->
             LockAppController.oblivion(this)
         }
 
